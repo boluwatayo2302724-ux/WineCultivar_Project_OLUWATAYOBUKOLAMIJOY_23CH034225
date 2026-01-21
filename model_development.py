@@ -1,72 +1,63 @@
-# Wine Cultivar Origin Prediction - Model Development
+# model_building.ipynb
 
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sklearn.datasets import load_wine
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 import joblib
+import os
 
-# 1. Load Wine dataset
-wine = load_wine()
-df = pd.DataFrame(wine.data, columns=wine.feature_names)
-df['cultivar'] = wine.target
+# Load Wine dataset
+data = load_wine()
+df = pd.DataFrame(data.data, columns=data.feature_names)
+df["cultivar"] = data.target
 
-
-# 2. Feature selection (choose any 6 allowed features)
-features = [
-    'alcohol',
-    'malic_acid',
-    'alcalinity_of_ash',
-    'magnesium',
-    'color_intensity',
-    'proline'
+# Select only allowed features
+selected_features = [
+    "alcohol",
+    "malic_acid",
+    "ash",
+    "alcalinity_of_ash",
+    "flavanoids",
+    "color_intensity"
 ]
 
+X = df[selected_features]
+y = df["cultivar"]
 
-target = 'cultivar'
+# Check missing values
+print(df.isnull().sum())
 
-
-X = df[features]
-y = df[target]
-
-
-# 3. Handle missing values (dataset has none, but included for completeness)
-X = X.fillna(X.mean())
-
-
-# 4. Feature scaling (MANDATORY)
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-
-# 5. Train-test split
+# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y, test_size=0.2, random_state=42, stratify=y
+    X, y, test_size=0.2, random_state=42, stratify=y
 )
 
+# Feature scaling (mandatory)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-# 6. Model implementation
-model = SVC(kernel='rbf', probability=True)
+# Train model
+model = RandomForestClassifier(
+    n_estimators=200,
+    random_state=42
+)
 model.fit(X_train, y_train)
 
-
-# 7. Evaluation
+# Evaluation
 y_pred = model.predict(X_test)
 
-
-accuracy = accuracy_score(y_test, y_pred)
-print("Accuracy:", accuracy)
+print("Accuracy:", accuracy_score(y_test, y_pred))
 print("\nClassification Report:\n")
 print(classification_report(y_test, y_pred))
 
+# Save model & scaler
+os.makedirs("model", exist_ok=True)
+joblib.dump(model, "wine_cultivar_model.pkl")
+joblib.dump(scaler, "scaler.pkl")
 
-# 8. Save model and scaler
-joblib.dump(model, 'wine_cultivar_model.pkl')
-joblib.dump(scaler, 'scaler.pkl')
-
-
-print("Model and scaler saved successfully")
+print("Model and scaler saved successfully!")
